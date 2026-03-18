@@ -1,5 +1,6 @@
 import os
 import glob
+import yaml
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 from PIL import Image
@@ -24,16 +25,35 @@ class Dataset:
     classes: Dict[int, str]
     images: List[ImageRecord]
 
-def parse_classes(dataset_path: str) -> Dict[int, str]:
-    """Parses classes.txt from the dataset path."""
-    classes_path = os.path.join(dataset_path, "classes.txt")
+def get_dataset_classes(dataset_path: str) -> Dict[int, str]:
+    """
+    Attempts to parse class names from YOLO yaml configs (e.g. data.yaml, dataset.yaml)
+    or falls back to classes.txt.
+    """
     classes = {}
+    
+    yaml_files = glob.glob(os.path.join(dataset_path, "*.yaml"))
+    for yf in yaml_files:
+        try:
+            with open(yf, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+                if data and "names" in data:
+                    names = data["names"]
+                    if isinstance(names, list):
+                        return {idx: name for idx, name in enumerate(names)}
+                    elif isinstance(names, dict):
+                        return {int(idx): name for idx, name in names.items()}
+        except Exception as e:
+            print(f"Warning: Failed to parse YAML {yf}: {e}")
+            
+    classes_path = os.path.join(dataset_path, "classes.txt")
     if os.path.exists(classes_path):
         with open(classes_path, "r", encoding="utf-8") as f:
             for idx, line in enumerate(f):
                 line = line.strip()
                 if line:
                     classes[idx] = line
+                    
     return classes
 
 def parse_yolo_dataset(dataset_path: str) -> Dataset:
@@ -41,14 +61,11 @@ def parse_yolo_dataset(dataset_path: str) -> Dataset:
     Parses a directory containing YOLO format images and text annotations.
     Assumes .txt files have the same base name as the image files.
     """
-    classes = parse_classes(dataset_path)
+    classes = get_dataset_classes(dataset_path)
     
-    # Supported image extensions
     img_exts = {".jpg", ".jpeg", ".png", ".bmp"}
-    
     images = []
     
-    # Recursively find all images (could be in train/val subfolders)
     for root, _, files in os.walk(dataset_path):
         for file in files:
             ext = os.path.splitext(file)[1].lower()
@@ -57,13 +74,12 @@ def parse_yolo_dataset(dataset_path: str) -> Dataset:
                 base_name = os.path.splitext(file)[0]
                 txt_path = os.path.join(root, base_name + ".txt")
                 
-                # Try to get image dimensions
+                width, height = 0, 0
                 try:
                     with Image.open(img_path) as img:
                         width, height = img.size
                 except Exception as e:
-                    width, height = 0, 0
-                    print(f"Warning: Could not open image {img_path}: {e}")
+                    pass
                 
                 record = ImageRecord(image_path=img_path, width=width, height=height)
                 
@@ -87,7 +103,7 @@ def parse_yolo_dataset(dataset_path: str) -> Dataset:
                                         height=bbox_height
                                     ))
                                 except ValueError:
-                                    pass # Ignore malformed lines
+                                    pass
                 images.append(record)
                 
     return Dataset(classes=classes, images=images)
