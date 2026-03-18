@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YDVT: Image Dataset Visualization Tool</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>YDVT</h1>
+                <p>Dataset Explorer</p>
+            </div>
+            <div class="summary-stats" id="sidebar-stats">
+                <!-- Populated by JS -->
+            </div>
+            <div class="image-list-container">
+                <input type="text" id="search-input" placeholder="Search images..." />
+                <ul class="image-list" id="image-list">
+                    <!-- Populated by JS -->
+                </ul>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Analytics Dashboard -->
+            <section class="dashboard card">
+                <div class="chart-container">
+                    <canvas id="classDistChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="bboxSizeChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Image Viewer -->
+            <section class="viewer card">
+                <div class="viewer-header">
+                    <h2 id="current-image-name">Select an image</h2>
+                    <div id="current-image-details" class="image-details"></div>
+                </div>
+                <div class="canvas-wrapper" id="canvas-wrapper">
+                    <!-- The img tag will hold the actual image, canvas will overlay for drawing boxes -->
+                    <img id="main-image" src="" alt="Dataset Image" style="display: none;" />
+                    <canvas id="annotation-canvas"></canvas>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
