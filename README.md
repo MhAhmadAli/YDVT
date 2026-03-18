@@ -1,1 +1,1 @@
-# YOLO Data Visualization Tool
+# Image Dataset Visualization Tool
