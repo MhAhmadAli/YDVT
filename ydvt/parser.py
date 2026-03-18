@@ -59,7 +59,7 @@ def get_dataset_classes(dataset_path: str) -> Dict[int, str]:
 def parse_yolo_dataset(dataset_path: str) -> Dataset:
     """
     Parses a directory containing YOLO format images and text annotations.
-    Assumes .txt files have the same base name as the image files.
+    Checks for labels placed side-by-side with images or in a sibling `labels/` directory.
     """
     classes = get_dataset_classes(dataset_path)
     
@@ -72,7 +72,17 @@ def parse_yolo_dataset(dataset_path: str) -> Dataset:
             if ext in img_exts:
                 img_path = os.path.join(root, file)
                 base_name = os.path.splitext(file)[0]
+                
+                # 1. Check side-by-side
                 txt_path = os.path.join(root, base_name + ".txt")
+                
+                # 2. If not side-by-side, check sibling 'labels' directory
+                if not os.path.exists(txt_path):
+                    if os.path.basename(root) == 'images':
+                        parent_dir = os.path.dirname(root)
+                        alt_txt_path = os.path.join(parent_dir, 'labels', base_name + ".txt")
+                        if os.path.exists(alt_txt_path):
+                            txt_path = alt_txt_path
                 
                 width, height = 0, 0
                 try:

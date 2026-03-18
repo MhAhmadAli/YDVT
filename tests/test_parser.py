@@ -1,4 +1,6 @@
+import os
 import pytest
+import yaml
 from ydvt.parser import parse_yolo_dataset, BBox
 
 def test_parse_yolo_dataset(tmp_path):
@@ -48,3 +50,24 @@ def test_parse_yolo_dataset_with_yaml_dict(tmp_path):
     dataset = parse_yolo_dataset(str(tmp_path))
     assert dataset.classes[0] == "apple"
     assert dataset.classes[1] == "orange"
+
+def test_parse_yolo_dataset_separated_structure(tmp_path):
+    # Simulated structure: dataset/train/images and dataset/train/labels
+    train_dir = tmp_path / "train"
+    images_dir = train_dir / "images"
+    labels_dir = train_dir / "labels"
+    
+    images_dir.mkdir(parents=True)
+    labels_dir.mkdir(parents=True)
+    
+    img_file = images_dir / "test2_hash.jpg"
+    img_file.write_bytes(b"")
+    
+    txt_file = labels_dir / "test2_hash.txt"
+    txt_file.write_text("2 0.1 0.1 0.5 0.5")
+    
+    dataset = parse_yolo_dataset(str(tmp_path))
+    assert len(dataset.images) == 1
+    assert dataset.images[0].image_path == str(img_file)
+    assert len(dataset.images[0].bboxes) == 1
+    assert dataset.images[0].bboxes[0] == BBox(2, 0.1, 0.1, 0.5, 0.5)
