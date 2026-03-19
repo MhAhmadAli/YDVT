@@ -325,7 +325,7 @@ def main():
     aug_group = parser.add_argument_group("headless augmentation options (trigger with --augment)")
     aug_group.add_argument("--classes", nargs="+", type=str, help="Target classes to augment (names or IDs)")
     aug_group.add_argument("--augmentations", nargs="+", type=str, help="Augmentations to apply (e.g., rotate, mixup)")
-    aug_group.add_argument("--images-per-class", type=int, default=5, help="Number of images to generate per class")
+    aug_group.add_argument("--num-images", type=int, default=5, help="Number of images to generate per class")
     aug_group.add_argument("--strict-mode", action="store_true", help="Enable strict mode filtering")
 
     # Optional analytics flags
@@ -365,7 +365,7 @@ def main():
                     args.dataset_path,
                     class_names=args.classes,
                     aug_names=args.augmentations,
-                    num_images=args.images_per_class,
+                    num_images=args.num_images,
                     strict_filter=args.strict_mode,
                 )
             except ImportError as e:
