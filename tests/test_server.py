@@ -1,5 +1,7 @@
 import os
 import pytest
+import numpy as np
+import cv2
 from ydvt.server import app, get_dataset
 import ydvt.server
 
@@ -11,8 +13,10 @@ def client(tmp_path):
     classes_file = tmp_path / "classes.txt"
     classes_file.write_text("class0\nclass1")
 
-    img_file = tmp_path / "test1.jpg"
-    img_file.write_bytes(b"") # fake image
+    # Create a real image so augmenter can read it
+    img_array = np.full((100, 100, 3), 128, dtype=np.uint8)
+    img_path = tmp_path / "test1.jpg"
+    cv2.imwrite(str(img_path), img_array)
 
     txt_file = tmp_path / "test1.txt"
     txt_file.write_text("0 0.5 0.5 0.2 0.2\n1 0.4 0.4 0.2 0.2")
@@ -49,3 +53,46 @@ def test_index_route(client):
         assert response.status_code == 200 or response.status_code == 404
     except Exception:
         pass
+
+def test_api_augmentations(client):
+    response = client.get("/api/augmentations")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert isinstance(data, list)
+    names = {a["name"] for a in data}
+    assert "rotate" in names
+    assert "mixup" in names
+    assert "cutmix" in names
+
+def test_api_augment_missing_body(client):
+    response = client.post("/api/augment", content_type="application/json")
+    assert response.status_code == 400
+
+def test_api_augment_missing_fields(client):
+    response = client.post("/api/augment",
+                           json={"target_classes": [0]})
+    assert response.status_code == 400
+
+def test_api_augment_success(client):
+    response = client.post("/api/augment", json={
+        "target_classes": [0],
+        "augmentations": ["flip_horizontal"],
+        "num_images": 2,
+    })
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["generated_count"] == 2
+    assert len(data["generated_files"]) == 2
+
+def test_api_augment_invalidates_cache(client):
+    # First request populates cache
+    client.get("/api/analytics")
+    assert ydvt.server._dataset_cache is not None
+
+    # Augment invalidates it
+    client.post("/api/augment", json={
+        "target_classes": [0],
+        "augmentations": ["flip_horizontal"],
+        "num_images": 1,
+    })
+    assert ydvt.server._dataset_cache is None

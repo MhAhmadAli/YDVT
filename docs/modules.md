@@ -20,8 +20,20 @@ The CLI Entrypoint.
 A lightweight `Flask` integration to serve the local dataset GUI.
 - Restricts direct File System access securely by only serving images mapped inside the loaded `Dataset` object memory.
 - Provides `/api/analytics` and `/api/images` endpoints.
+- **`GET /api/augmentations`**: Returns the list of available augmentation transforms with metadata.
+- **`POST /api/augment`**: Accepts a JSON body with `target_classes`, `augmentations`, `num_images`, and optional `params`. Runs the augmentation pipeline, saves new images/labels, and invalidates the dataset cache.
 
-## 5. Web Frontend (`ydvt/templates/*`)
-- **HTML**: Standard layout with Sidebar and Data View.
-- **CSS**: Premium dark-mode variables using Vanilla CSS. Inter fonts.
-- **JS**: Fetches metrics, parses Chart.js config for visualization, and utilizes HTML5 `<canvas>` to accurately plot `(x_center, y_center, width, height)` rectangles onto images recursively scaled to the browser viewport.
+## 5. `ydvt/augmenter.py`
+Data augmentation module for balancing imbalanced YOLO datasets.
+- Uses `albumentations` for bbox-aware image transforms.
+- **Standard augmentations** (12): Rotate, Horizontal Flip, Random Crop, Resize/Scale, Translate, Brightness, Contrast, Saturation, Hue, Gaussian Blur, Gaussian Noise, Cutout/Random Erasing.
+- **Advanced augmentations** (2): Mixup (alpha-blend two images) and CutMix (paste a crop of one image onto another), with merged bounding boxes.
+- `apply_augmentations(dataset, target_classes, augmentation_names, num_images, params)`: Main entry point. For each target class, samples source images, applies the selected pipeline, and writes augmented images + YOLO labels to disk.
+- `list_available_augmentations()`: Returns metadata for all 14 augmentations for UI rendering.
+- Respects both side-by-side and `images/`/`labels/` directory structures.
+
+## 6. Web Frontend (`ydvt/templates/*`)
+- **HTML**: Standard layout with Sidebar and Data View. Includes an Augmentation modal dialog.
+- **CSS**: Premium dark-mode variables using Vanilla CSS. Inter fonts. Modal overlay with animations.
+- **JS**: Fetches metrics, parses Chart.js config for visualization, and utilizes HTML5 `<canvas>` to accurately plot `(x_center, y_center, width, height)` rectangles onto images recursively scaled to the browser viewport. Augmentation panel populates class distribution and available transforms, sends configuration to `/api/augment`, and refreshes charts on completion.
+

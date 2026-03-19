@@ -27,6 +27,11 @@
             <div class="summary-stats" id="sidebar-stats">
                 <!-- Populated by JS -->
             </div>
+            <div class="sidebar-actions">
+                <button id="open-augment-btn" class="btn-accent" title="Augment dataset to balance classes">
+                    ✦ Augment
+                </button>
+            </div>
             <div class="image-list-container">
                 <input type="text" id="search-input" placeholder="Search images..." />
                 <ul class="image-list" id="image-list">
@@ -60,6 +65,46 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Augmentation Modal -->
+    <div id="augment-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>✦ Augment Dataset</h2>
+                <button id="close-augment-btn" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Class Selection -->
+                <div class="modal-section">
+                    <h3>Target Classes</h3>
+                    <p class="hint">Select underrepresented classes to augment.</p>
+                    <div id="class-select-list" class="class-select-grid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Augmentation Selection -->
+                <div class="modal-section">
+                    <h3>Augmentations</h3>
+                    <p class="hint">Choose which transformations to apply.</p>
+                    <div id="augmentation-select-list" class="aug-select-grid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Count -->
+                <div class="modal-section">
+                    <h3>Images per Class</h3>
+                    <p class="hint">Number of augmented images to generate per selected class.</p>
+                    <input type="number" id="aug-count-input" class="aug-count-input" min="1" max="500" value="5" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div id="augment-status" class="augment-status"></div>
+                <button id="apply-augment-btn" class="btn-accent btn-apply">Apply Augmentations</button>
+            </div>
+        </div>
     </div>
 
     <script src="app.js"></script>

@@ -1,10 +1,11 @@
 import os
 import webbrowser
 from threading import Timer
-from flask import Flask, jsonify, send_file, send_from_directory
+from flask import Flask, jsonify, request, send_file, send_from_directory
 
 from ydvt.parser import parse_yolo_dataset
 from ydvt.analytics import compute_analytics
+from ydvt.augmenter import apply_augmentations, list_available_augmentations
 
 app = Flask(__name__)
 _dataset_cache = None
@@ -15,6 +16,11 @@ def get_dataset():
     if _dataset_cache is None:
         _dataset_cache = parse_yolo_dataset(_dataset_path)
     return _dataset_cache
+
+def invalidate_cache():
+    """Clear the dataset cache so the next request re-parses from disk."""
+    global _dataset_cache
+    _dataset_cache = None
 
 @app.route("/")
 def index():
@@ -53,6 +59,55 @@ def api_image_file(idx):
     if 0 <= idx < len(ds.images):
         return send_file(ds.images[idx].image_path)
     return "Image not found", 404
+
+@app.route("/api/augmentations")
+def api_augmentations():
+    """Return the list of available augmentations."""
+    return jsonify(list_available_augmentations())
+
+@app.route("/api/augment", methods=["POST"])
+def api_augment():
+    """
+    Apply augmentations to balance specified classes.
+
+    Expects JSON body::
+
+        {
+            "target_classes": [0, 2],
+            "augmentations": ["rotate", "flip_horizontal", "gaussian_blur"],
+            "num_images": 5,
+            "params": {}          // optional per-augmentation overrides
+        }
+    """
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Invalid JSON body"}), 400
+
+    target_classes = data.get("target_classes")
+    augmentation_names = data.get("augmentations")
+    num_images = data.get("num_images", 5)
+    params = data.get("params", {})
+
+    if not target_classes or not augmentation_names:
+        return jsonify({"error": "target_classes and augmentations are required"}), 400
+
+    ds = get_dataset()
+
+    try:
+        result = apply_augmentations(
+            dataset=ds,
+            target_classes=target_classes,
+            augmentation_names=augmentation_names,
+            num_images=num_images,
+            params=params,
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    # Invalidate the cache so subsequent analytics/image requests reflect the new data
+    invalidate_cache()
+
+    return jsonify(result)
 
 def start_server(dataset_path: str, port: int = 5000):
     global _dataset_path
