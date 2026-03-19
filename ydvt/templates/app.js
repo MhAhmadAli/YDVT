@@ -7,6 +7,7 @@ let globalClasses = {};
 let activeImageIdx = null;
 let classDistChartInstance = null;
 let bboxSizeChartInstance = null;
+let splitDistChartInstance = null;
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
@@ -66,6 +67,7 @@ function renderCharts(data) {
     // Destroy existing charts if present (for refresh)
     if (classDistChartInstance) classDistChartInstance.destroy();
     if (bboxSizeChartInstance) bboxSizeChartInstance.destroy();
+    if (splitDistChartInstance) splitDistChartInstance.destroy();
 
     // 1. Class Distribution Chart
     const distCtx = document.getElementById('classDistChart').getContext('2d');
@@ -136,6 +138,43 @@ function renderCharts(data) {
             }
         }
     });
+
+    // 3. Split Distribution Chart
+    const splitData = data.split_distribution || {};
+    const splitNames = Object.keys(splitData).map(s => s.charAt(0).toUpperCase() + s.slice(1));
+    const splitImages = Object.values(splitData).map(s => s.images);
+
+    if (splitNames.length > 0) {
+        const splitCtx = document.getElementById('splitDistChart').getContext('2d');
+        splitDistChartInstance = new Chart(splitCtx, {
+            type: 'doughnut',
+            data: {
+                labels: splitNames,
+                datasets: [{
+                    data: splitImages,
+                    backgroundColor: COLORS.slice(0, splitNames.length),
+                    borderColor: '#1e293b',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: { display: true, text: 'Split Distribution (Images)', color: '#f8fafc', font: { size: 14 } },
+                    legend: { position: 'bottom', labels: { padding: 16 } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                const split = Object.values(splitData)[ctx.dataIndex];
+                                return ` ${ctx.label}: ${split.images} images (${split.percentage}%) · ${split.bboxes} bboxes`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
 
 function renderImageList(images) {

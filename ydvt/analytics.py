@@ -1,5 +1,29 @@
 from typing import Dict, Any, List
+import os
+import re
 from .parser import Dataset
+
+# Known split directory names (case-insensitive matching)
+_SPLIT_NAMES = {"train", "valid", "validation", "val", "test"}
+
+
+def _detect_split(image_path: str) -> str:
+    """
+    Detect the dataset split from the image file path.
+
+    Looks for known directory names (train, valid, val, validation, test) in
+    the path components. Returns the normalised split name, or 'unassigned'
+    if no split directory is found.
+    """
+    parts = image_path.replace("\\", "/").lower().split("/")
+    for part in parts:
+        if part in _SPLIT_NAMES:
+            # Normalise validation/val → valid
+            if part in ("validation", "val"):
+                return "valid"
+            return part
+    return "unassigned"
+
 
 def compute_analytics(dataset: Dataset) -> Dict[str, Any]:
     """
@@ -21,10 +45,19 @@ def compute_analytics(dataset: Dataset) -> Dict[str, Any]:
     # Track unmapped classes just in case
     unmapped_classes = set()
 
+    # Split tracking
+    split_counts: Dict[str, Dict[str, int]] = {}  # split -> {images, bboxes}
+
     for record in dataset.images:
+        split = _detect_split(record.image_path)
+        if split not in split_counts:
+            split_counts[split] = {"images": 0, "bboxes": 0}
+        split_counts[split]["images"] += 1
+
         if record.bboxes:
             images_with_annotations += 1
             total_bboxes += len(record.bboxes)
+            split_counts[split]["bboxes"] += len(record.bboxes)
             
             for bbox in record.bboxes:
                 if bbox.class_id in dataset.classes:
@@ -55,6 +88,16 @@ def compute_analytics(dataset: Dataset) -> Dict[str, Any]:
         else:
             avg_sizes[cls_id] = {"w": 0.0, "h": 0.0}
 
+    # Build split distribution with percentages
+    split_distribution = {}
+    for split_name, counts in sorted(split_counts.items()):
+        pct = (counts["images"] / total_images * 100) if total_images > 0 else 0.0
+        split_distribution[split_name] = {
+            "images": counts["images"],
+            "bboxes": counts["bboxes"],
+            "percentage": round(pct, 1),
+        }
+
     # Format the output metrics
     return {
         "summary": {
@@ -70,5 +113,6 @@ def compute_analytics(dataset: Dataset) -> Dict[str, Any]:
         "avg_bbox_sizes": {
             dataset.classes.get(cls_id, f"Class {cls_id}"): sizes
             for cls_id, sizes in avg_sizes.items()
-        }
+        },
+        "split_distribution": split_distribution,
     }

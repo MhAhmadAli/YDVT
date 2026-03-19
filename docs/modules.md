@@ -9,6 +9,7 @@ Responsible for reading the local Dataset format (currently YOLO).
 ## 2. `ydvt/analytics.py`
 Computes the statistics required for visual reporting.
 - `compute_analytics(dataset: Dataset) -> Dict`: Iterates over the records to find total bounding boxes, missing classes, class frequency distribution, and computes average relative sizes `(width, height)`.
+- **Split Distribution**: Detects train/valid/test splits from image file paths and reports per-split image count, bbox count, and percentage. The `_detect_split()` helper normalises variant names (`val`, `validation` → `valid`). Images without a matching split directory are labelled `unassigned`.
 
 ## 3. `ydvt/main.py`
 The CLI Entrypoint.
@@ -29,19 +30,19 @@ A lightweight `Flask` integration to serve the local dataset GUI.
 - Restricts direct File System access securely by only serving images mapped inside the loaded `Dataset` object memory.
 - Provides `/api/analytics` and `/api/images` endpoints.
 - **`GET /api/augmentations`**: Returns the list of available augmentation transforms with metadata.
-- **`POST /api/augment`**: Accepts a JSON body with `target_classes`, `augmentations`, `num_images`, and optional `params`. Runs the augmentation pipeline, saves new images/labels, and invalidates the dataset cache.
+- **`POST /api/augment`**: Accepts a JSON body with `target_classes`, `augmentations`, `num_images`, optional `strict_filter` (bool, default false), and optional `params`. Runs the augmentation pipeline, saves new images/labels, and invalidates the dataset cache.
 
 ## 6. `ydvt/augmenter.py`
 Data augmentation module for balancing imbalanced YOLO datasets.
 - Uses `albumentations` for bbox-aware image transforms.
 - **Standard augmentations** (12): Rotate, Horizontal Flip, Random Crop, Resize/Scale, Translate, Brightness, Contrast, Saturation, Hue, Gaussian Blur, Gaussian Noise, Cutout/Random Erasing.
 - **Advanced augmentations** (2): Mixup (alpha-blend two images) and CutMix (paste a crop of one image onto another), with merged bounding boxes.
-- `apply_augmentations(dataset, target_classes, augmentation_names, num_images, params)`: Main entry point. For each target class, samples source images, applies the selected pipeline, and writes augmented images + YOLO labels to disk.
+- `apply_augmentations(dataset, target_classes, augmentation_names, num_images, params, strict_filter)`: Main entry point. For each target class, samples source images, applies the selected pipeline, and writes augmented images + YOLO labels to disk. When `strict_filter=True`, only images where every bbox belongs to the target class are used as sources.
 - `list_available_augmentations()`: Returns metadata for all 14 augmentations for UI rendering.
 - Respects both side-by-side and `images/`/`labels/` directory structures.
 
 ## 7. Web Frontend (`ydvt/templates/*`)
 - **HTML**: Standard layout with Sidebar and Data View. Includes an Augmentation modal dialog.
 - **CSS**: Premium dark-mode variables using Vanilla CSS. Inter fonts. Modal overlay with animations.
-- **JS**: Fetches metrics, parses Chart.js config for visualization, and utilizes HTML5 `<canvas>` to accurately plot `(x_center, y_center, width, height)` rectangles onto images recursively scaled to the browser viewport. Augmentation panel populates class distribution and available transforms, sends configuration to `/api/augment`, and refreshes charts on completion.
+- **JS**: Fetches metrics, parses Chart.js config for visualization (class distribution bar chart, average bbox sizes bar chart, split distribution doughnut chart), and utilizes HTML5 `<canvas>` to accurately plot `(x_center, y_center, width, height)` rectangles onto images recursively scaled to the browser viewport. Augmentation panel populates class distribution and available transforms, sends configuration to `/api/augment`, and refreshes charts on completion.
 

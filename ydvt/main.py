@@ -56,6 +56,25 @@ def render_cli(dataset_path: str):
 
     console.print(table)
 
+    # Split distribution table
+    split_dist = analytics.get("split_distribution", {})
+    if split_dist:
+        split_table = Table(title="Split Distribution")
+        split_table.add_column("Split", justify="left", style="cyan", no_wrap=True)
+        split_table.add_column("Images", justify="right", style="magenta")
+        split_table.add_column("BBoxes", justify="right", style="green")
+        split_table.add_column("%", justify="right", style="yellow")
+
+        for split_name, info in split_dist.items():
+            split_table.add_row(
+                split_name.capitalize(),
+                str(info["images"]),
+                str(info["bboxes"]),
+                f"{info['percentage']}%",
+            )
+
+        console.print(split_table)
+
 def main():
     parser = argparse.ArgumentParser(description="Image Dataset Visualization Tool")
     parser.add_argument("dataset_path", type=str, help="Path to the dataset directory (YOLO format)")
