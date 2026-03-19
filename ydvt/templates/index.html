@@ -31,27 +31,46 @@
                 <button id="open-augment-btn" class="btn-accent" title="Augment dataset to balance classes">
                     ✦ Augment
                 </button>
+                <button id="open-analytics-btn" class="btn-accent" style="margin-top: 8px; background: rgba(255,255,255,0.05); color: var(--text-primary);" title="Run deep-dive analytics">
+                    ❖ Advanced Analytics
+                </button>
             </div>
             <div class="image-list-container">
                 <input type="text" id="search-input" placeholder="Search images..." />
                 <ul class="image-list" id="image-list">
                     <!-- Populated by JS -->
                 </ul>
+                <div class="pagination-controls">
+                    <button id="page-prev-btn" disabled>&lt;</button>
+                    <span id="page-indicator">Page 1 of 1</span>
+                    <button id="page-next-btn" disabled>&gt;</button>
+                </div>
             </div>
         </aside>
 
         <!-- Main Content -->
         <main class="main-content">
             <!-- Analytics Dashboard -->
-        <section class="dashboard card">
-                <div class="chart-container">
-                    <canvas id="classDistChart"></canvas>
+        <section class="dashboard card" style="height: auto; min-height: 300px; padding: 24px;">
+                <div style="display: flex; gap: 24px; height: 300px; width: 100%;">
+                    <div class="chart-container">
+                        <canvas id="classDistChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="bboxSizeChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="splitDistChart"></canvas>
+                    </div>
                 </div>
-                <div class="chart-container">
-                    <canvas id="bboxSizeChart"></canvas>
+            </section>
+            
+            <section class="card" id="advanced-analytics-section" style="display:none; padding:0; flex-direction: column;">
+                <div class="viewer-header">
+                    <h2>Advanced Analytics Results</h2>
                 </div>
-                <div class="chart-container">
-                    <canvas id="splitDistChart"></canvas>
+                <div id="advanced-results-container" style="padding: 24px; display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));">
+                    <!-- Dynamic rendering output from app.js -->
                 </div>
             </section>
 
@@ -117,6 +136,40 @@
             <div class="modal-footer">
                 <div id="augment-status" class="augment-status"></div>
                 <button id="apply-augment-btn" class="btn-accent btn-apply">Apply Augmentations</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Advanced Analytics Modal -->
+    <div id="analytics-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>❖ Advanced Analytics</h2>
+                <button id="close-analytics-btn" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <p class="hint">Select the deep-dive metrics to compute. Heavy metrics will run in the background.</p>
+                    <div id="analytics-select-list" class="aug-select-grid">
+                        <label><input type="checkbox" name="analytic-opt" value="images_per_class" /><span>Images per Class</span></label>
+                        <label><input type="checkbox" name="analytic-opt" value="bbox_count_per_image" /><span>BBox Count per Image</span></label>
+                        <label><input type="checkbox" name="analytic-opt" value="bbox_size_dist" /><span>BBox Size Distribution</span></label>
+                        <label><input type="checkbox" name="analytic-opt" value="bbox_aspect_ratio" /><span>BBox Aspect Ratio Stats</span></label>
+                        <label><input type="checkbox" name="analytic-opt" value="location_heatmaps" /><span>Object Location Heatmap</span></label>
+                        <label><input type="checkbox" name="analytic-opt" value="image_resolution_dist" /><span>Image Resolution Distribution</span></label>
+                        <label><input type="checkbox" name="analytic-opt" value="label_density" /><span>Label Density</span></label>
+                        <label><input type="checkbox" name="analytic-opt" value="co_occurrence_matrix" /><span>Class Co-occurrence Matrix</span></label>
+                        <label><input type="checkbox" name="analytic-opt" value="annotation_completeness" /><span>Annotation Completeness</span></label>
+                        <label><input type="checkbox" name="analytic-opt" value="duplicate_detection" /><span>Duplicate Image Detection</span></label>
+                        <label><input type="checkbox" name="analytic-opt" value="label_imbalance" /><span>Label Imbalance Metrics</span></label>
+                        <label><input type="checkbox" name="analytic-opt" value="outlier_detection" /><span>Outlier Detection (&gt;2σ)</span></label>
+                        <label><input type="checkbox" name="analytic-opt" value="anchor_analysis" /><span>Anchor Box Analysis (K-Means)</span></label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div id="analytics-status" class="augment-status"></div>
+                <button id="run-analytics-btn" class="btn-accent btn-apply">Run Analytics</button>
             </div>
         </div>
     </div>

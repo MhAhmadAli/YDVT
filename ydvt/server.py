@@ -1,6 +1,8 @@
 import os
+import uuid
 import webbrowser
 from threading import Timer
+from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, jsonify, request, send_file, send_from_directory
 
 from ydvt.parser import parse_yolo_dataset
@@ -10,6 +12,10 @@ from ydvt.augmenter import apply_augmentations, list_available_augmentations
 app = Flask(__name__)
 _dataset_cache = None
 _dataset_path = None
+
+# Async job storage and executor
+_analytics_jobs = {}
+_executor = ThreadPoolExecutor(max_workers=2)
 
 def get_dataset():
     global _dataset_cache
@@ -41,17 +47,90 @@ def api_analytics():
 @app.route("/api/images")
 def api_images():
     ds = get_dataset()
+    
+    # Pagination & Search parameters
+    page = int(request.args.get("page", 1))
+    limit = int(request.args.get("limit", 50))
+    search = request.args.get("search", "").lower()
+    
+    # Filter by search query if provided
+    filtered_images = ds.images
+    if search:
+        filtered_images = [
+            r for r in ds.images
+            if search in os.path.basename(r.image_path).lower()
+        ]
+        
+    total_count = len(filtered_images)
+    total_pages = (total_count + limit - 1) // limit if limit > 0 else 0
+    
+    # Slice the page
+    start_idx = (page - 1) * limit
+    end_idx = start_idx + limit
+    paginated = filtered_images[start_idx:end_idx]
+    
     images_data = []
-    for i, record in enumerate(ds.images):
+    for record in paginated:
+        # We need the original index to fetch the full image file via /api/image/<idx>
+        original_idx = ds.images.index(record)
         images_data.append({
-            "idx": i,
+            "idx": original_idx,
             "filename": os.path.basename(record.image_path),
             "width": record.width,
             "height": record.height,
             "bboxes": [{"class_id": b.class_id, "x_center": b.x_center, "y_center": b.y_center, 
                         "width": b.width, "height": b.height} for b in record.bboxes]
         })
-    return jsonify({"images": images_data, "classes": ds.classes})
+        
+    return jsonify({
+        "images": images_data,
+        "classes": ds.classes,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total_count": total_count,
+            "total_pages": total_pages
+        }
+    })
+
+@app.route("/api/analytics/jobs", methods=["POST"])
+def api_create_analytics_job():
+    data = request.get_json(silent=True) or {}
+    options = data.get("options", {})
+    
+    ds = get_dataset()
+    job_id = str(uuid.uuid4())
+    
+    _analytics_jobs[job_id] = {
+        "status": "processing",
+        "result": None,
+        "error": None
+    }
+    
+    def _run_job(job_id, dataset, opts):
+        try:
+            res = compute_analytics(dataset, options=opts)
+            _analytics_jobs[job_id]["result"] = res
+            _analytics_jobs[job_id]["status"] = "completed"
+        except Exception as e:
+            _analytics_jobs[job_id]["error"] = str(e)
+            _analytics_jobs[job_id]["status"] = "failed"
+
+    _executor.submit(_run_job, job_id, ds, options)
+    return jsonify({"job_id": job_id, "status": "processing"}), 202
+
+@app.route("/api/analytics/jobs/<job_id>", methods=["GET"])
+def api_get_analytics_job(job_id):
+    job = _analytics_jobs.get(job_id)
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+        
+    if job["status"] == "completed":
+        return jsonify({"status": "completed", "result": job["result"]})
+    elif job["status"] == "failed":
+        return jsonify({"status": "failed", "error": job["error"]}), 500
+    else:
+        return jsonify({"status": "processing"})
 
 @app.route("/api/image/<int:idx>")
 def api_image_file(idx):
