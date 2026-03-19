@@ -14,13 +14,14 @@ Computes the statistics required for visual reporting.
 ## 3. `ydvt/main.py`
 The CLI Entrypoint.
 - Resolves CLI Arguments via `argparse` including 13 optional analytics flags (`--images-per-class`, `--co-occurrence-matrix`, `--all-analytics`, etc.).
+- Resolves headless augmentation arguments (`--classes`, `--augmentations`, `--num-images`, `--strict-mode`).
 - Uses `rich` Table/Panel formatting with dedicated renderers for each metric.
 - Routes execution to `server.py` if `--gui`, `wizard.py` if `--augment`.
 
 ## 4. `ydvt/wizard.py`
-Interactive CLI augmentation wizard.
-- Uses `questionary` for multi-select checkbox prompts (class selection, augmentation selection).
-- Presents class distribution counts to help identify underrepresented classes.
+Interactive CLI augmentation wizard and headless runner.
+- **Interactive:** Uses `questionary` for multi-select checkbox prompts (class selection, augmentation selection). Presents class distribution counts to help identify underrepresented classes.
+- **Headless:** `run_headless_augmentation` parses CLI arguments, validates classes and augmentations without user input.
 - Validates user input (image count) and shows a confirmation summary before execution.
 - Uses `rich` for styled output and a progress spinner during augmentation.
 

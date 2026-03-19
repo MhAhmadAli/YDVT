@@ -60,7 +60,17 @@ python3 ydvt /path/to/my/dataset --augment
 4. *Enabling optional Strict Mode*
 5. *Confirming and executing the augmentation*
 
-**4. Extended Analytics (CLI)**
+**4. Headless Augmentation (CLI)**
+```bash
+python3 ydvt /path/to/my/dataset --augment --classes dog cat --augmentations rotate mixup --num-images 10 --strict-mode
+```
+*Bypass the interactive wizard and run programmatic augmentations. Requires both `--classes` and `--augmentations`. Parameters:*
+- `--classes`: Target classes to augment (names or numeric IDs)
+- `--augmentations`: Augmentations to apply (e.g., rotate, mixup)
+- `--num-images`: Number of images to generate per class (default: 5)
+- `--strict-mode`: Enable strict mode filtering
+
+**5. Extended Analytics (CLI)**
 ```bash
 # Enable individual metrics
 python3 ydvt /path/to/my/dataset --co-occurrence-matrix --label-imbalance
@@ -71,5 +81,5 @@ python3 ydvt /path/to/my/dataset --all-analytics
 *Available flags: `--images-per-class`, `--bbox-count-per-image`, `--bbox-size-dist`, `--bbox-aspect-ratio`, `--location-heatmaps`, `--image-resolution-dist`, `--label-density`, `--co-occurrence-matrix`, `--annotation-completeness`, `--duplicate-detection`, `--label-imbalance`, `--outlier-detection`, `--anchor-analysis`*
 
 ## Documentation and Testing
-- Run test suites from the repository root: `pytest tests/` (83 tests covering parser, analytics, augmenter, server routes, and CLI wizard)
+- Run test suites from the repository root: `pytest tests/` (86 tests covering parser, analytics, augmenter, server routes, headless runner, and CLI wizard)
 - View module documentation inside the `/docs` directory.
