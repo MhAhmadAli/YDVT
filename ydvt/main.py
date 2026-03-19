@@ -60,6 +60,7 @@ def main():
     parser = argparse.ArgumentParser(description="Image Dataset Visualization Tool")
     parser.add_argument("dataset_path", type=str, help="Path to the dataset directory (YOLO format)")
     parser.add_argument("--gui", action="store_true", help="Launch the Web GUI")
+    parser.add_argument("--augment", action="store_true", help="Launch the interactive augmentation wizard")
     
     args = parser.parse_args()
     
@@ -69,6 +70,13 @@ def main():
             start_server(args.dataset_path)
         except ImportError as e:
             print(f"Error starting server: {e}", file=sys.stderr)
+            sys.exit(1)
+    elif args.augment:
+        try:
+            from ydvt.wizard import run_augmentation_wizard
+            run_augmentation_wizard(args.dataset_path)
+        except ImportError as e:
+            print(f"Error starting augmentation wizard: {e}", file=sys.stderr)
             sys.exit(1)
     else:
         render_cli(args.dataset_path)
