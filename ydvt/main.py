@@ -321,6 +321,13 @@ def main():
     parser.add_argument("--gui", action="store_true", help="Launch the Web GUI")
     parser.add_argument("--augment", action="store_true", help="Launch the interactive augmentation wizard")
 
+    # Headless augmentation flags
+    aug_group = parser.add_argument_group("headless augmentation options (trigger with --augment)")
+    aug_group.add_argument("--classes", nargs="+", type=str, help="Target classes to augment (names or IDs)")
+    aug_group.add_argument("--augmentations", nargs="+", type=str, help="Augmentations to apply (e.g., rotate, mixup)")
+    aug_group.add_argument("--images-per-class", type=int, default=5, help="Number of images to generate per class")
+    aug_group.add_argument("--strict-mode", action="store_true", help="Enable strict mode filtering")
+
     # Optional analytics flags
     analytics_group = parser.add_argument_group("optional analytics")
     analytics_group.add_argument("--all-analytics", action="store_true", help="Enable all optional analytics")
@@ -348,12 +355,29 @@ def main():
             print(f"Error starting server: {e}", file=sys.stderr)
             sys.exit(1)
     elif args.augment:
-        try:
-            from ydvt.wizard import run_augmentation_wizard
-            run_augmentation_wizard(args.dataset_path)
-        except ImportError as e:
-            print(f"Error starting augmentation wizard: {e}", file=sys.stderr)
-            sys.exit(1)
+        if args.classes or args.augmentations:
+            if not args.classes or not args.augmentations:
+                print("Error: Headless augmentation requires BOTH --classes and --augmentations.", file=sys.stderr)
+                sys.exit(1)
+            try:
+                from ydvt.wizard import run_headless_augmentation
+                run_headless_augmentation(
+                    args.dataset_path,
+                    class_names=args.classes,
+                    aug_names=args.augmentations,
+                    num_images=args.images_per_class,
+                    strict_filter=args.strict_mode,
+                )
+            except ImportError as e:
+                print(f"Error starting headless augmentation: {e}", file=sys.stderr)
+                sys.exit(1)
+        else:
+            try:
+                from ydvt.wizard import run_augmentation_wizard
+                run_augmentation_wizard(args.dataset_path)
+            except ImportError as e:
+                print(f"Error starting augmentation wizard: {e}", file=sys.stderr)
+                sys.exit(1)
     else:
         # Build analytics options from CLI flags
         options = {}

@@ -12,7 +12,7 @@ import cv2
 from unittest.mock import patch, MagicMock
 
 from ydvt.parser import parse_yolo_dataset
-from ydvt.wizard import run_augmentation_wizard
+from ydvt.wizard import run_augmentation_wizard, run_headless_augmentation
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +155,48 @@ class TestWizardExecution:
 
         mock_apply.assert_called_once()
         assert mock_apply.call_args.kwargs["strict_filter"] is True
+
+
+class TestHeadlessAugmentation:
+    """Verify headless CLI augmentation logic."""
+
+    @patch("ydvt.wizard.apply_augmentations")
+    def test_headless_success(self, mock_apply, tmp_path):
+        ds_path = _make_dataset_on_disk(tmp_path)
+        mock_apply.return_value = {"generated_count": 5, "skipped_classes": []}
+
+        # Should run without SystemExit
+        run_headless_augmentation(
+            dataset_path=ds_path,
+            class_names=["cat", "1"],  # Test name and ID resolution
+            aug_names=["flip_horizontal", "rotate"],
+            num_images=5,
+            strict_filter=True
+        )
+
+        mock_apply.assert_called_once()
+        kwargs = mock_apply.call_args.kwargs
+        # "cat" -> id 0, "1" -> id 1
+        assert sorted(kwargs["target_classes"]) == [0, 1]
+        assert kwargs["augmentation_names"] == ["flip_horizontal", "rotate"]
+        assert kwargs["num_images"] == 5
+        assert kwargs["strict_filter"] is True
+
+    def test_headless_invalid_class_aborts(self, tmp_path):
+        ds_path = _make_dataset_on_disk(tmp_path)
+        with pytest.raises(SystemExit):
+            run_headless_augmentation(ds_path, ["invalid_class"], ["rotate"], 1, False)
+
+    def test_headless_invalid_aug_aborts(self, tmp_path):
+        ds_path = _make_dataset_on_disk(tmp_path)
+        with pytest.raises(SystemExit):
+            run_headless_augmentation(ds_path, ["cat"], ["invalid_aug"], 1, False)
+
+    def test_headless_empty_dataset_aborts(self, tmp_path):
+        # Empty dataset
+        (tmp_path / "classes.txt").write_text("")
+        with pytest.raises(SystemExit):
+            run_headless_augmentation(str(tmp_path), ["cat"], ["rotate"], 1, False)
 
 
 class TestMainAugmentFlag:

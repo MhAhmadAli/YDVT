@@ -134,3 +134,76 @@ def run_augmentation_wizard(dataset_path: str) -> None:
             "these classes found.\n"
             "[dim]Disable Strict Mode to include mixed-class images.[/dim]"
         )
+
+def run_headless_augmentation(dataset_path: str, class_names: list, aug_names: list, num_images: int, strict_filter: bool) -> None:
+    """Execute augmentation headlessly from CLI arguments."""
+    console.print(f"\n[bold green]Parsing dataset from[/bold green] {dataset_path}…")
+    dataset = parse_yolo_dataset(dataset_path)
+    analytics = compute_analytics(dataset)
+
+    dist = analytics["class_distribution"]
+    if not dist:
+        console.print("[red]No classes found in the dataset. Aborting.[/red]")
+        sys.exit(1)
+
+    # 1. Resolve classes
+    selected_classes = []
+    for cname in class_names:
+        class_id = None
+        for cid, name in dataset.classes.items():
+            if name == cname or str(cid) == cname:
+                class_id = cid
+                break
+        if class_id is None:
+            console.print(f"[red]Error: Class '{cname}' not found in dataset.[/red]")
+            sys.exit(1)
+        selected_classes.append(class_id)
+        
+    # Remove duplicates while preserving list order
+    selected_classes = list(dict.fromkeys(selected_classes))
+
+    # 2. Validate augmentations
+    available_augs = {a["name"] for a in list_available_augmentations()}
+    for aug in aug_names:
+        if aug not in available_augs:
+            console.print(f"[red]Error: Unknown augmentation '{aug}'. Available options: {', '.join(sorted(available_augs))}[/red]")
+            sys.exit(1)
+
+    # 3. Print Summary
+    resolved_class_names = [dataset.classes.get(c, f"Class {c}") for c in selected_classes]
+    console.print()
+    console.print(Panel(
+        f"[bold]Classes:[/bold] {', '.join(resolved_class_names)}\n"
+        f"[bold]Augmentations:[/bold] {', '.join(aug_names)}\n"
+        f"[bold]Images per class:[/bold] {num_images}\n"
+        f"[bold]Strict Mode:[/bold] {'enabled' if strict_filter else 'disabled'}",
+        title="[bold blue]Headless Augmentation Summary[/bold blue]",
+        expand=False,
+    ))
+
+    # 4. Execute
+    with console.status("[bold cyan]Generating augmented images…[/bold cyan]"):
+        try:
+            result = apply_augmentations(
+                dataset=dataset,
+                target_classes=selected_classes,
+                augmentation_names=aug_names,
+                num_images=num_images,
+                strict_filter=strict_filter,
+            )
+        except Exception as e:
+            console.print(f"[red]Error during augmentation: {e}[/red]")
+            sys.exit(1)
+
+    console.print(
+        f"\n[bold green]✓[/bold green] Generated "
+        f"[bold]{result['generated_count']}[/bold] augmented images."
+    )
+    if result.get("skipped_classes"):
+        skipped_names = [dataset.classes.get(c, f"Class {c}") for c in result["skipped_classes"]]
+        console.print(
+            f"[yellow]⚠[/yellow] Skipped "
+            f"[bold]{', '.join(skipped_names)}[/bold] — no images with exclusively "
+            "these classes found.\n"
+            "[dim]Disable Strict Mode to include mixed-class images.[/dim]"
+        )
