@@ -113,8 +113,24 @@ def _build_pipeline(augmentation_names: List[str],
     )
 
 
-def _images_for_class(dataset: Dataset, class_id: int) -> List[ImageRecord]:
-    """Return all images that contain at least one bbox of the given class."""
+def _images_for_class(dataset: Dataset, class_id: int,
+                       strict: bool = False) -> List[ImageRecord]:
+    """
+    Return images containing the given class.
+
+    Args:
+        dataset: Parsed Dataset object.
+        class_id: Target class ID.
+        strict: If True, only return images where EVERY bounding box
+                belongs to class_id (no other classes present).
+                If False (default), any image containing at least one
+                bbox of class_id is returned.
+    """
+    if strict:
+        return [
+            img for img in dataset.images
+            if img.bboxes and all(b.class_id == class_id for b in img.bboxes)
+        ]
     return [img for img in dataset.images if any(b.class_id == class_id for b in img.bboxes)]
 
 
@@ -229,6 +245,7 @@ def apply_augmentations(
     augmentation_names: List[str],
     num_images: int = 5,
     params: Optional[Dict] = None,
+    strict_filter: bool = False,
 ) -> Dict:
     """
     Apply selected augmentations to images of the target classes.
@@ -237,7 +254,8 @@ def apply_augmentations(
     that class and generate *num_images* augmented copies.
 
     For Mixup and CutMix, a secondary image is sampled randomly from
-    the whole dataset.
+    the whole dataset (or the strictly filtered pool when strict_filter
+    is True).
 
     Args:
         dataset: Parsed Dataset object.
@@ -245,10 +263,15 @@ def apply_augmentations(
         augmentation_names: List of augmentation names to apply.
         num_images: Number of augmented images to generate per class.
         params: Optional per-augmentation parameter overrides.
+        strict_filter: If True, only select source images where EVERY
+                       bounding box belongs to the target class. This
+                       prevents non-target class counts from growing.
+                       Defaults to False.
 
     Returns:
-        dict with ``generated_count`` (int) and ``generated_files``
-        (list of created file paths).
+        dict with ``generated_count`` (int), ``generated_files``
+        (list of created file paths), and ``skipped_classes`` (list of
+        class IDs that had no eligible images under strict filtering).
     """
     params = params or {}
 
@@ -260,10 +283,12 @@ def apply_augmentations(
     pipeline = _build_pipeline(standard_names, params) if standard_names else None
 
     generated_files: List[str] = []
+    skipped_classes: List[int] = []
 
     for class_id in target_classes:
-        source_images = _images_for_class(dataset, class_id)
+        source_images = _images_for_class(dataset, class_id, strict=strict_filter)
         if not source_images:
+            skipped_classes.append(class_id)
             continue
 
         for i in range(num_images):
@@ -286,9 +311,15 @@ def apply_augmentations(
                     # If the transform fails (e.g. all bboxes clipped out), skip
                     continue
 
+            # Pool for secondary images in Mixup / CutMix
+            secondary_pool = (
+                _images_for_class(dataset, class_id, strict=True)
+                if strict_filter else dataset.images
+            )
+
             # Apply Mixup
-            if do_mixup and len(dataset.images) > 1:
-                other = random.choice(dataset.images)
+            if do_mixup and len(secondary_pool) > 1:
+                other = random.choice(secondary_pool)
                 other_img = cv2.imread(other.image_path)
                 if other_img is not None:
                     other_bboxes = [(b.x_center, b.y_center, b.width, b.height) for b in other.bboxes]
@@ -299,8 +330,8 @@ def apply_augmentations(
                     )
 
             # Apply CutMix
-            if do_cutmix and len(dataset.images) > 1:
-                other = random.choice(dataset.images)
+            if do_cutmix and len(secondary_pool) > 1:
+                other = random.choice(secondary_pool)
                 other_img = cv2.imread(other.image_path)
                 if other_img is not None:
                     other_bboxes = [(b.x_center, b.y_center, b.width, b.height) for b in other.bboxes]
@@ -330,6 +361,7 @@ def apply_augmentations(
     return {
         "generated_count": len(generated_files),
         "generated_files": generated_files,
+        "skipped_classes": skipped_classes,
     }
 
 

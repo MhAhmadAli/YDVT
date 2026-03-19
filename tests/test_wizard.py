@@ -90,7 +90,18 @@ class TestWizardCancellation:
 
         mock_q.checkbox.return_value.ask.side_effect = [[0], ["flip_horizontal"]]
         mock_q.text.return_value.ask.return_value = "3"
-        mock_q.confirm.return_value.ask.return_value = False
+        # First confirm is strict mode, second is final confirm
+        mock_q.confirm.return_value.ask.side_effect = [False, False]
+
+        run_augmentation_wizard(ds_path)
+
+    @patch("ydvt.wizard.questionary")
+    def test_cancel_at_strict_mode(self, mock_q, tmp_path):
+        ds_path = _make_dataset_on_disk(tmp_path)
+
+        mock_q.checkbox.return_value.ask.side_effect = [[0], ["flip_horizontal"]]
+        mock_q.text.return_value.ask.return_value = "3"
+        mock_q.confirm.return_value.ask.return_value = None
 
         run_augmentation_wizard(ds_path)
 
@@ -105,7 +116,8 @@ class TestWizardExecution:
 
         mock_q.checkbox.return_value.ask.side_effect = [[0], ["rotate", "brightness"]]
         mock_q.text.return_value.ask.return_value = "3"
-        mock_q.confirm.return_value.ask.return_value = True
+        # First confirm = strict mode (False), second = proceed (True)
+        mock_q.confirm.return_value.ask.side_effect = [False, True]
         mock_apply.return_value = {"generated_count": 3, "generated_files": []}
 
         run_augmentation_wizard(ds_path)
@@ -120,13 +132,29 @@ class TestWizardExecution:
 
         mock_q.checkbox.return_value.ask.side_effect = [[0], ["flip_horizontal"]]
         mock_q.text.return_value.ask.return_value = "2"
-        mock_q.confirm.return_value.ask.return_value = True
+        mock_q.confirm.return_value.ask.side_effect = [False, True]
 
         run_augmentation_wizard(ds_path)
 
         # Verify augmented files were actually created
         aug_files = [f for f in os.listdir(str(tmp_path)) if f.startswith("aug_")]
         assert len(aug_files) >= 2  # at least 2 images
+
+    @patch("ydvt.wizard.questionary")
+    @patch("ydvt.wizard.apply_augmentations")
+    def test_strict_mode_passed_to_apply(self, mock_apply, mock_q, tmp_path):
+        ds_path = _make_dataset_on_disk(tmp_path)
+
+        mock_q.checkbox.return_value.ask.side_effect = [[0], ["flip_horizontal"]]
+        mock_q.text.return_value.ask.return_value = "2"
+        # First confirm = strict mode (True), second = proceed (True)
+        mock_q.confirm.return_value.ask.side_effect = [True, True]
+        mock_apply.return_value = {"generated_count": 2, "generated_files": [], "skipped_classes": []}
+
+        run_augmentation_wizard(ds_path)
+
+        mock_apply.assert_called_once()
+        assert mock_apply.call_args.kwargs["strict_filter"] is True
 
 
 class TestMainAugmentFlag:

@@ -312,6 +312,7 @@ function applyAugmentations() {
 
     const targetClasses = Array.from(classCbs).map(cb => parseInt(cb.value));
     const augmentations = Array.from(augCbs).map(cb => cb.value);
+    const strictFilter = document.getElementById('aug-strict-input').checked;
 
     statusEl.textContent = 'Generating…';
     statusEl.className = 'augment-status';
@@ -325,6 +326,7 @@ function applyAugmentations() {
             target_classes: targetClasses,
             augmentations: augmentations,
             num_images: numImages,
+            strict_filter: strictFilter,
         }),
     })
     .then(res => res.json())
@@ -338,7 +340,11 @@ function applyAugmentations() {
             return;
         }
 
-        statusEl.textContent = `✓ Generated ${data.generated_count} images.`;
+        let msg = `✓ Generated ${data.generated_count} images.`;
+        if (data.skipped_classes && data.skipped_classes.length > 0) {
+            msg += ` ⚠ Skipped ${data.skipped_classes.length} class(es) — no exclusive images found.`;
+        }
+        statusEl.textContent = msg;
         statusEl.className = 'augment-status success';
 
         // Refresh the dashboard to reflect new data

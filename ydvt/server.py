@@ -76,7 +76,8 @@ def api_augment():
             "target_classes": [0, 2],
             "augmentations": ["rotate", "flip_horizontal", "gaussian_blur"],
             "num_images": 5,
-            "params": {}          // optional per-augmentation overrides
+            "strict_filter": false,  // optional, default false
+            "params": {}             // optional per-augmentation overrides
         }
     """
     data = request.get_json(silent=True)
@@ -86,6 +87,7 @@ def api_augment():
     target_classes = data.get("target_classes")
     augmentation_names = data.get("augmentations")
     num_images = data.get("num_images", 5)
+    strict_filter = data.get("strict_filter", False)
     params = data.get("params", {})
 
     if not target_classes or not augmentation_names:
@@ -100,6 +102,7 @@ def api_augment():
             augmentation_names=augmentation_names,
             num_images=num_images,
             params=params,
+            strict_filter=strict_filter,
         )
     except Exception as e:
         return jsonify({"error": str(e)}), 500

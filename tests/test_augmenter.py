@@ -136,6 +136,19 @@ class TestImagesForClass:
         ds = _make_dataset(tmp_path)
         assert _images_for_class(ds, 99) == []
 
+    def test_strict_excludes_mixed_images(self, tmp_path):
+        ds = _make_dataset(tmp_path, num_images=3)
+        # img0 has class 0 AND class 1 → mixed → excluded under strict
+        # img1 and img2 have only class 0 → included
+        strict_imgs = _images_for_class(ds, 0, strict=True)
+        assert len(strict_imgs) == 2
+
+    def test_strict_returns_empty_when_all_mixed(self, tmp_path):
+        ds = _make_dataset(tmp_path, num_images=3)
+        # class 1 only appears in img0, which also has class 0 → no exclusive images
+        strict_imgs = _images_for_class(ds, 1, strict=True)
+        assert len(strict_imgs) == 0
+
 
 # ---------------------------------------------------------------------------
 # Tests: _resolve_output_dirs
@@ -348,3 +361,67 @@ class TestApplyAugmentations:
         )
         # 2 per class = 4 total
         assert result["generated_count"] == 4
+
+
+# ---------------------------------------------------------------------------
+# Tests: strict_filter in apply_augmentations
+# ---------------------------------------------------------------------------
+
+class TestStrictFilter:
+    def test_strict_skips_mixed_class(self, tmp_path):
+        """Class 1 has no exclusive images → skipped under strict_filter."""
+        ds = _make_dataset(tmp_path, num_images=2, side_by_side=True)
+        result = apply_augmentations(
+            dataset=ds,
+            target_classes=[1],
+            augmentation_names=["flip_horizontal"],
+            num_images=5,
+            strict_filter=True,
+        )
+        assert result["generated_count"] == 0
+        assert 1 in result["skipped_classes"]
+
+    def test_strict_generates_only_target_class(self, tmp_path):
+        """With strict_filter, output labels should only have class 0."""
+        ds = _make_dataset(tmp_path, num_images=3, side_by_side=True)
+        result = apply_augmentations(
+            dataset=ds,
+            target_classes=[0],
+            augmentation_names=["flip_horizontal"],
+            num_images=3,
+            strict_filter=True,
+        )
+        assert result["generated_count"] == 3
+        for path in result["generated_files"]:
+            lbl_path = os.path.splitext(path)[0] + ".txt"
+            with open(lbl_path) as f:
+                for line in f:
+                    cls_id = int(line.strip().split()[0])
+                    assert cls_id == 0, "strict filter should exclude non-target classes"
+
+    def test_strict_returns_skipped_classes_list(self, tmp_path):
+        ds = _make_dataset(tmp_path, num_images=2, side_by_side=True)
+        result = apply_augmentations(
+            dataset=ds,
+            target_classes=[0, 1],
+            augmentation_names=["brightness"],
+            num_images=2,
+            strict_filter=True,
+        )
+        # class 0 should have generated, class 1 should be skipped
+        assert result["generated_count"] == 2
+        assert 1 in result["skipped_classes"]
+        assert 0 not in result["skipped_classes"]
+
+    def test_non_strict_default_keeps_all(self, tmp_path):
+        """Without strict_filter, mixed-class images are used."""
+        ds = _make_dataset(tmp_path, num_images=2, side_by_side=True)
+        result = apply_augmentations(
+            dataset=ds,
+            target_classes=[1],
+            augmentation_names=["flip_horizontal"],
+            num_images=2,
+        )
+        # Class 1 exists in img0 (mixed), so augmentation proceeds
+        assert result["generated_count"] == 2
+        assert result.get("skipped_classes", []) == []

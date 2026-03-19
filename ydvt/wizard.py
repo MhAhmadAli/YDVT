@@ -85,13 +85,24 @@ def run_augmentation_wizard(dataset_path: str) -> None:
 
     num_images = int(num_str)
 
+    # ── Step 3.5: Strict Mode ────────────────────────────────────────────
+    strict_filter = questionary.confirm(
+        "Enable Strict Mode? (only use images where ALL bboxes are the target class)",
+        default=False,
+    ).ask()
+
+    if strict_filter is None:
+        console.print("[yellow]Aborted.[/yellow]")
+        return
+
     # ── Step 4: Confirm ──────────────────────────────────────────────────
     class_names = [dataset.classes.get(c, f"Class {c}") for c in selected_classes]
     console.print()
     console.print(Panel(
         f"[bold]Classes:[/bold] {', '.join(class_names)}\n"
         f"[bold]Augmentations:[/bold] {', '.join(selected_augs)}\n"
-        f"[bold]Images per class:[/bold] {num_images}",
+        f"[bold]Images per class:[/bold] {num_images}\n"
+        f"[bold]Strict Mode:[/bold] {'enabled' if strict_filter else 'disabled'}",
         title="[bold blue]Augmentation Summary[/bold blue]",
         expand=False,
     ))
@@ -108,9 +119,18 @@ def run_augmentation_wizard(dataset_path: str) -> None:
             target_classes=selected_classes,
             augmentation_names=selected_augs,
             num_images=num_images,
+            strict_filter=strict_filter,
         )
 
     console.print(
         f"\n[bold green]✓[/bold green] Generated "
         f"[bold]{result['generated_count']}[/bold] augmented images."
     )
+    if result.get("skipped_classes"):
+        skipped_names = [dataset.classes.get(c, f"Class {c}") for c in result["skipped_classes"]]
+        console.print(
+            f"[yellow]⚠[/yellow] Skipped "
+            f"[bold]{', '.join(skipped_names)}[/bold] — no images with exclusively "
+            "these classes found.\n"
+            "[dim]Disable Strict Mode to include mixed-class images.[/dim]"
+        )

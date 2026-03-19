@@ -488,3 +488,39 @@ body {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* Strict Mode Toggle */
+.strict-mode-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.strict-mode-toggle:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.strict-mode-toggle input[type="checkbox"] {
+    margin-top: 4px;
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+}
+
+.strict-mode-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.strict-mode-label strong {
+    color: var(--text);
+    font-size: 0.9em;
+}

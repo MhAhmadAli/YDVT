@@ -96,3 +96,16 @@ def test_api_augment_invalidates_cache(client):
         "num_images": 1,
     })
     assert ydvt.server._dataset_cache is None
+
+def test_api_augment_strict_filter(client):
+    response = client.post("/api/augment", json={
+        "target_classes": [1],
+        "augmentations": ["flip_horizontal"],
+        "num_images": 2,
+        "strict_filter": True,
+    })
+    assert response.status_code == 200
+    data = response.get_json()
+    # class 1 only exists in images with class 0 too → skipped
+    assert data["generated_count"] == 0
+    assert 1 in data["skipped_classes"]
