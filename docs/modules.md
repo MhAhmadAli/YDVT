@@ -8,15 +8,14 @@ Responsible for reading the local Dataset format (currently YOLO).
 
 ## 2. `ydvt/analytics.py`
 Computes the statistics required for visual reporting.
-- `compute_analytics(dataset: Dataset) -> Dict`: Iterates over the records to find total bounding boxes, missing classes, class frequency distribution, and computes average relative sizes `(width, height)`.
-- **Split Distribution**: Detects train/valid/test splits from image file paths and reports per-split image count, bbox count, and percentage. The `_detect_split()` helper normalises variant names (`val`, `validation` → `valid`). Images without a matching split directory are labelled `unassigned`.
+- `compute_analytics(dataset, options=None)`: Default metrics (class distribution, split distribution, avg bbox sizes) are always computed. Accepts an `options` dict to enable 13 additional analytics (images per class, bbox count/size/aspect ratio stats, location heatmaps, resolution distribution, label density, co-occurrence matrix, annotation completeness, duplicate detection, label imbalance, outlier detection, anchor analysis).
+- `_detect_split()`: Infers train/valid/test splits from file paths. Normalises `val`/`validation` → `valid`.
 
 ## 3. `ydvt/main.py`
 The CLI Entrypoint.
-- Resolves CLI Arguments via `argparse`.
-- Computes logic and uses `rich` Table/Panel formatting to print a beautiful output summary to terminal.
-- Routes execution to `server.py` if the `--gui` flag is active.
-- Routes execution to `wizard.py` if the `--augment` flag is active.
+- Resolves CLI Arguments via `argparse` including 13 optional analytics flags (`--images-per-class`, `--co-occurrence-matrix`, `--all-analytics`, etc.).
+- Uses `rich` Table/Panel formatting with dedicated renderers for each metric.
+- Routes execution to `server.py` if `--gui`, `wizard.py` if `--augment`.
 
 ## 4. `ydvt/wizard.py`
 Interactive CLI augmentation wizard.

@@ -8,6 +8,11 @@ YDVT is a lightweight, high-performance tool for parsing, analyzing, and interac
 ## Features
 - **YOLO Parsing:** Deep parsing of YOLO `.txt` files mapping `[class_id, x_center, y_center, width, height]` alongside `classes.txt` indices. Supports both side-by-side and `images/`/`labels/` directory structures.
 - **Analytics Engine:** Fast metrics computation reporting total instances per class, tracking missing classes, and mapping average bounding box distributions.
+- **Extended Analytics (CLI):** 13 optional deep-dive metrics enabled via individual flags or `--all-analytics`:
+  - Images per class, BBox count per image, BBox size & aspect ratio distributions
+  - Object location heatmaps, Image resolution distribution, Label density
+  - Class co-occurrence matrix, Annotation completeness, Duplicate image detection
+  - Label imbalance metrics, Outlier detection, Anchor box suitability analysis
 - **Embedded Server:** Local lightweight Flask implementation streaming dataset images securely without transferring or duplicating files.
 - **Premium Aesthetics:** Web interface generating accurate HTML5 `<canvas>` bounding boxes over datasets and reactive Chart.js metric interfaces natively.
 - **Data Augmentation:** Per-class augmentation to balance imbalanced datasets. Supports 14 transforms:
@@ -55,6 +60,16 @@ python3 ydvt /path/to/my/dataset --augment
 4. *Enabling optional Strict Mode*
 5. *Confirming and executing the augmentation*
 
+**4. Extended Analytics (CLI)**
+```bash
+# Enable individual metrics
+python3 ydvt /path/to/my/dataset --co-occurrence-matrix --label-imbalance
+
+# Enable all optional analytics at once
+python3 ydvt /path/to/my/dataset --all-analytics
+```
+*Available flags: `--images-per-class`, `--bbox-count-per-image`, `--bbox-size-dist`, `--bbox-aspect-ratio`, `--location-heatmaps`, `--image-resolution-dist`, `--label-density`, `--co-occurrence-matrix`, `--annotation-completeness`, `--duplicate-detection`, `--label-imbalance`, `--outlier-detection`, `--anchor-analysis`*
+
 ## Documentation and Testing
-- Run test suites from the repository root: `pytest tests/` (56 tests covering parser, analytics, augmenter, server routes, and CLI wizard)
+- Run test suites from the repository root: `pytest tests/` (83 tests covering parser, analytics, augmenter, server routes, and CLI wizard)
 - View module documentation inside the `/docs` directory.
