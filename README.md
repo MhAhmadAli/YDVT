@@ -15,11 +15,11 @@ YDVT is a lightweight, high-performance tool for parsing, analyzing, and interac
   - Label imbalance metrics, Outlier detection, Anchor box suitability analysis
 - **Embedded Server:** Local lightweight Flask implementation streaming dataset images securely without transferring or duplicating files.
 - **Premium Aesthetics:** Web interface generating accurate HTML5 `<canvas>` bounding boxes over datasets and reactive Chart.js metric interfaces natively.
-- **Data Augmentation:** Per-class augmentation to balance imbalanced datasets. Supports 14 transforms:
-  - *Geometric:* Rotate, Horizontal Flip, Random Crop, Resize/Scale, Translate
-  - *Colour:* Brightness, Contrast, Saturation, Hue
-  - *Noise/Regularisation:* Gaussian Blur, Gaussian Noise, Cutout/Random Erasing
-  - *Multi-image:* Mixup, CutMix
+- **Data Augmentation:** Per-class augmentation to balance imbalanced datasets. Supports 14 transforms (use these exact keys for the `--augmentations` CLI flag):
+  - *Geometric:* `rotate`, `flip_horizontal`, `random_crop`, `resize`, `translate`
+  - *Colour:* `brightness`, `contrast`, `saturation`, `hue`
+  - *Noise/Regularisation:* `gaussian_blur`, `gaussian_noise`, `cutout`
+  - *Multi-image:* `mixup`, `cutmix`
 - **Strict Mode:** Optional filter that only uses source images where every bounding box belongs to the target class, preventing non-target class counts from growing.
 
 ## Prerequisites
